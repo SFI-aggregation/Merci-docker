@@ -1,0 +1,5 @@
+APP_NAME=my_app
+DB_HOST=my_database
+DB_USERNAME=my_user
+DB_PASSWORD=my_password
+MAIL_NAME=my_mailpit

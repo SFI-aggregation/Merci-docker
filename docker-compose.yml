@@ -1,0 +1,83 @@
+services:
+  back:
+    container_name: ${APP_NAME}
+    build:
+      dockerfile: ./docker/app/Dockerfile
+    environment:
+      - APACHE_DOCUMENT_ROOT=/var/www/html/public
+      - APP_DOMAIN=localhost
+      - TZ=Asia/Tokyo
+      - MAIL_MAILER=smtp
+      - MAIL_HOST=mailpit
+      - MAIL_PORT=1025
+      - MAIL_USERNAME=null
+      - MAIL_PASSWORD=null
+    tty: true
+    ports:
+      - ${APP_PORT:-80}:80
+      - 5173:5173
+    extra_hosts:
+      - api.merci-maman-develop.jp:host-gateway
+      - host.docker.internal:host-gateway
+    volumes:
+      - ./back:/var/www/html
+    depends_on:
+      - db
+      - mailpit
+    networks:
+      - shared-network
+
+  db:
+    container_name: merci_db
+    image: mysql:8.0
+    environment:
+      - MYSQL_DATABASE=${DB_HOST}
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_USER=${DB_USERNAME}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - TZ=Asia/Tokyo
+    command: --default-authentication-plugin=mysql_native_password
+    tty: true
+    ports:
+      - ${DB_PORT:-3306}:3306
+    volumes:
+      - ./docker/db/storage:/var/lib/mysql
+      - ./docker/db/server.cnf:/etc/mysql/conf.d/server.cnf
+      - ./docker/db/initdb/:/docker-entrypoint-initdb.d
+    networks:
+      - shared-network
+
+  mailpit:
+    container_name: ${MAIL_NAME}
+    image: axllent/mailpit:v1.9
+    environment:
+      - TZ=Asia/Tokyo
+    tty: true
+    ports:
+      - ${MAIL_PORT:-8025}:8025
+      - ${SMTP_PORT:-1025}:1025
+    networks:
+      - shared-network
+
+  front:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    volumes:
+      - ./front:/var/www/html
+    ports:
+      - "8080:80"
+    networks:
+      - shared-network
+    environment:
+      - DB_HOST=db  # DBサービスのホスト名
+      - DB_DATABASE=shared-db
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+
+volumes:
+  storage:
+
+networks:
+  shared-network:
+    external: true  # 既存のネットワークを利用
